@@ -367,43 +367,60 @@ export default function Home() {
             </div>
 
             {plan?.schedule.map((d) => (
-              <div key={d.day} className="glass p-5">
-                <h3 className="text-lg font-extrabold text-yellow-300 mt-0">
-                  {d.day} — {d.focus}
-                </h3>
+  <div key={d.day} className="glass p-5">
+    <h3 className="text-lg font-extrabold text-yellow-300 mt-0">
+      {d.day} — {d.focus}
+    </h3>
 
-                <b className="text-yellow-300">Warmup</b>
-                <ul className="mt-2 list-disc pl-6">
-                  {d.warmup.map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
+    {d.focus === "Rest Day" ? (
+      <>
+        <p className="opacity-90 mt-2">
+          Recovery day — let your body adapt. Keep it light and stay consistent.
+        </p>
 
-                <b className="text-yellow-300">Workout</b>
-                <ul className="mt-2 list-disc pl-6">
-                  {d.workout.map((ex, i) => (
-                    <li key={i}>
-                      {ex.exercise} — {ex.sets} sets × {ex.reps} (rest{" "}
-                      {ex.restSec}s)
-                    </li>
-                  ))}
-                </ul>
+        <b className="text-yellow-300">Optional recovery</b>
+        <ul className="mt-2 list-disc pl-6">
+          <li>5–10 min easy walk</li>
+          <li>Mobility 10 min</li>
+          <li>Light stretching 5–10 min</li>
+        </ul>
+      </>
+    ) : (
+      <>
+        <b className="text-yellow-300">Warmup</b>
+        <ul className="mt-2 list-disc pl-6">
+          {d.warmup.map((x, i) => (
+            <li key={i}>{x}</li>
+          ))}
+        </ul>
 
-                <b className="text-yellow-300">Finisher</b>
-                <ul className="mt-2 list-disc pl-6">
-                  {d.finisher.map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
+        <b className="text-yellow-300">Workout</b>
+        <ul className="mt-2 list-disc pl-6">
+          {d.workout.map((ex, i) => (
+            <li key={i}>
+              {ex.exercise} — {ex.sets} sets × {ex.reps} (rest {ex.restSec}s)
+            </li>
+          ))}
+        </ul>
 
-                <b className="text-yellow-300">Cooldown</b>
-                <ul className="mt-2 list-disc pl-6">
-                  {d.cooldown.map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+        <b className="text-yellow-300">Finisher</b>
+        <ul className="mt-2 list-disc pl-6">
+          {d.finisher.map((x, i) => (
+            <li key={i}>{x}</li>
+          ))}
+        </ul>
+
+        <b className="text-yellow-300">Cooldown</b>
+        <ul className="mt-2 list-disc pl-6">
+          {d.cooldown.map((x, i) => (
+            <li key={i}>{x}</li>
+          ))}
+        </ul>
+      </>
+    )}
+  </div>
+))}
+
 
             {plan?.disclaimer && (
               <p className="text-xs opacity-70 mt-2">{plan.disclaimer}</p>
