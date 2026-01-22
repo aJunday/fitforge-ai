@@ -1,4 +1,11 @@
-export type Goal = "fat_loss" | "muscle_gain" | "recomp" | "strength" | "general_fitness";
+// app/lib/types.ts
+
+export type Goal =
+  | "fat_loss"
+  | "muscle_gain"
+  | "recomp"
+  | "strength"
+  | "general_fitness";
 
 export type ActivityLevel =
   | "sedentary"
@@ -17,11 +24,12 @@ export type WorkoutInput = {
   age: number;
   heightCm: number;
   weightKg: number;
+  goalWeightKg: number; // ✅ NEW
   activityLevel: ActivityLevel;
 
   goal: Goal;
   level: WorkoutLevel;
-  daysPerWeek: number; // 3-6
+  daysPerWeek: number; // ✅ 1-6
   timePerSessionMin: number; // 30-90
   equipment: Equipment;
 };
@@ -51,7 +59,12 @@ export type WorkoutPlan = {
     day: string;
     focus: string;
     warmup: string[];
-    workout: Array<{ exercise: string; sets: number; reps: string; restSec: number }>;
+    workout: Array<{
+      exercise: string;
+      sets: number;
+      reps: string;
+      restSec: number;
+    }>;
     finisher: string[];
     cooldown: string[];
   }>;

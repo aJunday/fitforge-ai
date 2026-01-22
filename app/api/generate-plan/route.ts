@@ -1,7 +1,13 @@
 import OpenAI from "openai";
 import { z } from "zod";
 import { WorkoutInputSchema } from "@/app/lib/schema";
-import type { ApiResponse, WorkoutInput, Calculations, MacroSplit, WorkoutPlan } from "@/app/lib/types";
+import type {
+  ApiResponse,
+  WorkoutInput,
+  Calculations,
+  MacroSplit,
+  WorkoutPlan,
+} from "@/app/lib/types";
 import { buildWorkoutPrompt } from "@/app/lib/prompt";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -33,10 +39,15 @@ function clamp(n: number, min: number, max: number) {
 function calcMacros(input: WorkoutInput, targetCalories: number): MacroSplit {
   // Protein: goal-based g/kg
   const proteinPerKg =
-    input.goal === "muscle_gain" ? 2.0 :
-    input.goal === "strength" ? 1.8 :
-    input.goal === "fat_loss" ? 1.9 :
-    input.goal === "recomp" ? 1.9 : 1.6;
+    input.goal === "muscle_gain"
+      ? 2.0
+      : input.goal === "strength"
+      ? 1.8
+      : input.goal === "fat_loss"
+      ? 1.9
+      : input.goal === "recomp"
+      ? 1.9
+      : 1.6;
 
   const protein_g = round(input.weightKg * proteinPerKg);
 
@@ -48,7 +59,10 @@ function calcMacros(input: WorkoutInput, targetCalories: number): MacroSplit {
   const calsFromFat = fats_g * 9;
 
   // Remaining calories -> carbs
-  const remaining = Math.max(0, targetCalories - (calsFromProtein + calsFromFat));
+  const remaining = Math.max(
+    0,
+    targetCalories - (calsFromProtein + calsFromFat)
+  );
   const carbs_g = round(remaining / 4);
 
   return { protein_g, carbs_g, fats_g };
@@ -56,11 +70,80 @@ function calcMacros(input: WorkoutInput, targetCalories: number): MacroSplit {
 
 function calcTargetCalories(tdee: number, goal: WorkoutInput["goal"]) {
   // Safe, simple adjustments
-  if (goal === "fat_loss") return round(tdee * 0.8);       // ~20% deficit
-  if (goal === "muscle_gain") return round(tdee * 1.1);    // ~10% surplus
-  if (goal === "strength") return round(tdee * 1.0);       // maintain
-  if (goal === "recomp") return round(tdee * 0.9);         // slight deficit
-  return round(tdee * 1.0);                                // general fitness
+  if (goal === "fat_loss") return round(tdee * 0.8); // ~20% deficit
+  if (goal === "muscle_gain") return round(tdee * 1.1); // ~10% surplus
+  if (goal === "strength") return round(tdee * 1.0); // maintain
+  if (goal === "recomp") return round(tdee * 0.9); // slight deficit
+  return round(tdee * 1.0); // general fitness
+}
+
+/* =========================
+   ✅ Rest day support (NEW)
+   ========================= */
+const WEEK_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+function makeRestDay(day: string): WorkoutPlan["schedule"][number] {
+  return {
+    day,
+    focus: "Rest Day",
+    warmup: ["5–10 min easy walk"],
+    workout: [],
+    finisher: [],
+    cooldown: ["Mobility 10 min", "Light stretching 5–10 min"],
+  };
+}
+
+function spreadWorkoutIndices(daysPerWeek: number) {
+  const total = 7;
+  const idx = new Set<number>();
+
+  if (daysPerWeek >= 7) {
+    for (let i = 0; i < 7; i++) idx.add(i);
+    return idx;
+  }
+  if (daysPerWeek <= 1) {
+    idx.add(0); // Monday workout
+    return idx;
+  }
+
+  // Spread workouts evenly across the week
+  for (let i = 0; i < daysPerWeek; i++) {
+    const pos = Math.round((i * (total - 1)) / (daysPerWeek - 1));
+    idx.add(pos);
+  }
+
+  return idx;
+}
+
+function fillScheduleTo7Days(
+  workoutDays: WorkoutPlan["schedule"],
+  daysPerWeek: number
+): WorkoutPlan["schedule"] {
+  const indices = spreadWorkoutIndices(daysPerWeek);
+  const schedule: WorkoutPlan["schedule"] = [];
+
+  let w = 0;
+  for (let i = 0; i < 7; i++) {
+    const dayName = WEEK_DAYS[i];
+
+    if (indices.has(i) && w < workoutDays.length) {
+      // Force the correct day label into workout day object
+      schedule.push({ ...workoutDays[w], day: dayName });
+      w++;
+    } else {
+      schedule.push(makeRestDay(dayName));
+    }
+  }
+
+  return schedule;
 }
 
 export async function POST(req: Request) {
@@ -98,13 +181,22 @@ export async function POST(req: Request) {
     // Validate JSON from model
     const plan = JSON.parse(text) as WorkoutPlan;
 
+    // ✅ NEW: Always return a 7-day schedule with rest days filled in
+    plan.schedule = fillScheduleTo7Days(plan.schedule ?? [], input.daysPerWeek);
+
     const response: ApiResponse = { ok: true, calculations, macros, plan };
     return Response.json(response);
   } catch (err: any) {
     // zod errors look nicer
     if (err instanceof z.ZodError) {
-      return Response.json({ ok: false, error: err.issues[0]?.message || "Invalid input." }, { status: 400 });
+      return Response.json(
+        { ok: false, error: err.issues[0]?.message || "Invalid input." },
+        { status: 400 }
+      );
     }
-    return Response.json({ ok: false, error: err?.message || "Server error" }, { status: 500 });
+    return Response.json(
+      { ok: false, error: err?.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
